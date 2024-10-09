@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "lorempicsum",
-    "slug": "lorempicsum",
+    "slug": "lorem-picsum",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -31,6 +31,12 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b62e320c-a4c2-4616-abb1-bc72ff59f025"
+      }
+    },
+    "owner": "levizillow"
   }
 }
