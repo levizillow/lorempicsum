@@ -10,7 +10,7 @@ interface ImageItem {
   uri: string;
 }
 
-export default function Index() {
+export default function App() {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(true);
 
