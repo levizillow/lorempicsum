@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, Platform } from 'react-native';
-import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Screen, ScreenStack, ScreenStackHeaderConfig } from 'react-native-screens';
+import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, Platform, StatusBar } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const imageWidth = width;
 const imageHeight = (600 / 900) * width; // Maintain aspect ratio
 
@@ -12,10 +11,17 @@ interface ImageItem {
   uri: string;
 }
 
+function TitleBar() {
+  return (
+    <View style={styles.titleBar}>
+      <Text style={styles.titleText}>Lorem Picsum</Text>
+    </View>
+  );
+}
+
 function ImageList() {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     fetchImages();
@@ -46,13 +52,7 @@ function ImageList() {
       data={images}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
-      contentContainerStyle={[
-        styles.listContainer,
-        { paddingTop: Platform.OS === 'ios' ? 0 : 56 } // Add padding for Android
-      ]}
-      contentInset={{ top: insets.top + (Platform.OS === 'ios' ? 44 : 56) }}
-      contentOffset={{ x: 0, y: -(insets.top + (Platform.OS === 'ios' ? 44 : 56)) }}
-      style={styles.list}
+      contentContainerStyle={styles.listContainer}
     />
   );
 }
@@ -60,20 +60,11 @@ function ImageList() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ScreenStack style={styles.container}>
-        <Screen style={styles.screen}>
-          <ScreenStackHeaderConfig
-            title="Lorem Picsum"
-            titleFontWeight="bold"
-            statusBarStyle="dark"
-            statusBarAnimation="fade"
-            statusBarHidden={false}
-            translucent={true}  // This is key for showing content under the status bar
-            backgroundColor="#FFFFFF"  // Set this to match your header color
-          />
-          <ImageList />
-        </Screen>
-      </ScreenStack>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <SafeAreaView style={styles.container}>
+        <TitleBar />
+        <ImageList />
+      </SafeAreaView>
     </SafeAreaProvider>
   );
 }
@@ -81,15 +72,22 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
-  screen: {
-    flex: 1,
+  titleBar: {
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#CCCCCC',
   },
-  list: {
-    flex: 1,
+  titleText: {
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   listContainer: {
-    paddingBottom: 20, // Add some padding at the bottom for better UX
+    paddingTop: 10,
+    paddingBottom: 20,
   },
   image: {
     width: imageWidth,
