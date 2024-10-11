@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar } from 'react-native';
+import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 const imageWidth = width;
@@ -17,6 +18,9 @@ function TitleBar() {
   return (
     <View style={styles.titleBar}>
       <Text style={styles.titleText}>Proto Photo</Text>
+      <TouchableOpacity style={styles.filterButton} onPress={() => {}}>
+        <Ionicons name="options" size={24} color="#1A1A1A" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -138,8 +142,10 @@ const styles = StyleSheet.create({
   },
   titleBar: {
     height: 60,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#CCCCCC',
   },
@@ -177,5 +183,8 @@ const styles = StyleSheet.create({
   loadingContainer: {
     paddingTop: 20, // Adjust this value to position the indicator below the title bar
     alignItems: 'center',
+  },
+  filterButton: {
+    padding: 8,
   },
 });
