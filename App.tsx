@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   listContainer: {
-    paddingTop: 10,
+    // Remove paddingTop: 10,
     paddingBottom: 20,
   },
   image: {
