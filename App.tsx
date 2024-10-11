@@ -124,7 +124,7 @@ function AppContent() {
   };
 
   const titleBarHeight = 60;
-  const topInset = Platform.OS === 'ios' ? titleBarHeight : insets.top + titleBarHeight;
+  const topInset = Platform.OS === 'ios' ? titleBarHeight : titleBarHeight;
   const bottomInset = Math.max(insets.bottom || 0, 0);
 
   return (
