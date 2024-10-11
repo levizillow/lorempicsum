@@ -166,6 +166,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
   const [isBlur, setIsBlur] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const safeBottomInset = isNaN(bottomInset) ? 0 : Math.max(bottomInset, 0);
   const totalHeight = contentHeight + safeBottomInset;
@@ -246,6 +247,13 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
     }
   };
 
+  const handleContentPress = () => {
+    if (isInputFocused) {
+      Keyboard.dismiss();
+      setIsInputFocused(false);
+    }
+  };
+
   return (
     <TouchableWithoutFeedback onPress={() => onClose()}>
       <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
@@ -267,7 +275,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
             }
           ]}
         >
-          <TouchableWithoutFeedback>
+          <TouchableWithoutFeedback onPress={handleContentPress}>
             <View 
               style={styles.bottomSheetContent}
               onLayout={(event) => {
@@ -284,6 +292,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                       keyboardType="numeric"
                       value={width}
                       onChangeText={setWidth}
+                      onFocus={() => setIsInputFocused(true)}
+                      onBlur={() => setIsInputFocused(false)}
                     />
                     <Text style={styles.xLabel}>x</Text>
                     <TextInput
@@ -291,6 +301,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                       keyboardType="numeric"
                       value={height}
                       onChangeText={setHeight}
+                      onFocus={() => setIsInputFocused(true)}
+                      onBlur={() => setIsInputFocused(false)}
                     />
                   </View>
                 </View>
