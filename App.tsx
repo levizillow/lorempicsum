@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Platform, TextInput, Switch } from 'react-native';
+import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Platform, TextInput, Switch, Keyboard } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
@@ -164,6 +164,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
   const [height, setHeight] = useState(currentDimensions.height.toString());
   const [isGreyscale, setIsGreyscale] = useState(false);
   const [isBlur, setIsBlur] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const safeBottomInset = isNaN(bottomInset) ? 0 : Math.max(bottomInset, 0);
   const totalHeight = contentHeight + safeBottomInset;
@@ -207,6 +208,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
   });
 
   const handleDone = () => {
+    Keyboard.dismiss();
+    setIsInputFocused(false);
     const newWidth = parseInt(width);
     const newHeight = parseInt(height);
     if (!isNaN(newWidth) && !isNaN(newHeight) && (newWidth !== currentDimensions.width || newHeight !== currentDimensions.height)) {
@@ -239,7 +242,12 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
             }
           ]}
         >
-          <TouchableWithoutFeedback>
+          <TouchableWithoutFeedback onPress={() => {
+            if (isInputFocused) {
+              Keyboard.dismiss();
+              setIsInputFocused(false);
+            }
+          }}>
             <View 
               style={styles.bottomSheetContent}
               onLayout={(event) => {
@@ -255,6 +263,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                     keyboardType="numeric"
                     value={width}
                     onChangeText={setWidth}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                   />
                 </View>
                 <View style={styles.inputContainer}>
@@ -264,6 +274,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                     keyboardType="numeric"
                     value={height}
                     onChangeText={setHeight}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                   />
                 </View>
                 <View style={styles.toggleContainer}>
