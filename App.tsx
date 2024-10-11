@@ -10,6 +10,7 @@ const imageHeight = (600 / 900) * width; // Maintain aspect ratio
 interface ImageItem {
   id: string;
   uri: string;
+  photographer: string;
 }
 
 function TitleBar() {
@@ -28,20 +29,39 @@ function ImageList() {
     fetchImages();
   }, []);
 
-  const fetchImages = () => {
-    const newImages: ImageItem[] = Array.from({ length: 10 }, (_, i) => {
-      const randomNumber = Math.floor(1000 + Math.random() * 9000);
-      return {
-        id: `image-${i}`,
-        uri: `https://picsum.photos/900/600?random=${randomNumber}`
-      };
-    });
-    setImages(newImages);
-    setLoading(false);
+  const fetchImageAndPhotographer = async (index: number): Promise<ImageItem> => {
+    const randomNumber = Math.floor(1000 + Math.random() * 9000);
+    const response = await fetch(`https://picsum.photos/900/600?random=${randomNumber}`);
+    const imageUrl = response.url;
+    const id = imageUrl.split('/')[4];
+    const infoResponse = await fetch(`https://picsum.photos/id/${id}/info`);
+    const infoData = await infoResponse.json();
+    return {
+      id: `image-${index}`,
+      uri: `https://picsum.photos/id/${id}/900/600`,
+      photographer: infoData.author,
+    };
+  };
+
+  const fetchImages = async () => {
+    try {
+      const imagePromises = Array.from({ length: 10 }, (_, i) => fetchImageAndPhotographer(i));
+      const newImages = await Promise.all(imagePromises);
+      setImages(newImages);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      setLoading(false);
+    }
   };
 
   const renderItem = ({ item }: { item: ImageItem }) => (
-    <Image source={{ uri: item.uri }} style={styles.image} />
+    <View style={styles.imageContainer}>
+      <Image source={{ uri: item.uri }} style={styles.image} />
+      <View style={styles.photographerPill}>
+        <Text style={styles.photographerText}>{item.photographer}</Text>
+      </View>
+    </View>
   );
 
   if (loading) {
@@ -73,13 +93,14 @@ export default function App() {
   const [fontLoaded, setFontLoaded] = useState(false);
 
   useEffect(() => {
-    async function loadFont() {
+    async function loadFonts() {
       await Font.loadAsync({
         'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
+        'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
       });
       setFontLoaded(true);
     }
-    loadFont();
+    loadFonts();
   }, []);
 
   if (!fontLoaded) {
@@ -117,15 +138,31 @@ const styles = StyleSheet.create({
   titleText: {
     fontFamily: 'Poppins-Bold',
     fontSize: 24,
-    color: '#1A1A1A', // This sets the color to a darker shade
+    color: '#1A1A1A',
   },
   listContainer: {
-    // Remove paddingTop: 10,
     paddingBottom: 20,
+  },
+  imageContainer: {
+    position: 'relative',
+    marginBottom: 10,
   },
   image: {
     width: imageWidth,
     height: imageHeight,
-    marginBottom: 10,
+  },
+  photographerPill: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Lighter background (was 0.6)
+    paddingVertical: 4, // Slightly reduced vertical padding
+    paddingHorizontal: 8, // Slightly reduced horizontal padding
+    borderRadius: 16, // Adjusted for smaller text
+  },
+  photographerText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12, // Reduced from 16 to 12
+    color: '#FFFFFF',
   },
 });
