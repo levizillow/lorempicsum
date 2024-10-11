@@ -171,6 +171,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [widthError, setWidthError] = useState('');
+  const [heightError, setHeightError] = useState('');
 
   const safeBottomInset = isNaN(bottomInset) ? 0 : Math.max(bottomInset, 0);
   const totalHeight = contentHeight + safeBottomInset;
@@ -242,12 +244,19 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
 
   const handleDone = () => {
     Keyboard.dismiss();
-    const newWidth = parseInt(width);
-    const newHeight = parseInt(height);
-    if (!isNaN(newWidth) && !isNaN(newHeight) && (newWidth !== currentDimensions.width || newHeight !== currentDimensions.height)) {
-      onClose({ width: newWidth, height: newHeight });
-    } else {
-      onClose();
+    const { isValid, widthError: newWidthError, heightError: newHeightError } = validateDimensions(width, height);
+    
+    setWidthError(newWidthError);
+    setHeightError(newHeightError);
+
+    if (isValid) {
+      const newWidth = parseInt(width);
+      const newHeight = parseInt(height);
+      if (newWidth !== currentDimensions.width || newHeight !== currentDimensions.height) {
+        onClose({ width: newWidth, height: newHeight });
+      } else {
+        onClose();
+      }
     }
   };
 
@@ -256,6 +265,27 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
       Keyboard.dismiss();
       setIsInputFocused(false);
     }
+  };
+
+  const validateDimensions = (newWidth: string, newHeight: string): { isValid: boolean, widthError: string, heightError: string } => {
+    const widthNum = parseInt(newWidth);
+    const heightNum = parseInt(newHeight);
+    
+    let widthError = '';
+    let heightError = '';
+
+    if (isNaN(widthNum) || widthNum < 400 || widthNum > 999) {
+      widthError = 'Width must be between 400 and 999';
+    }
+    if (isNaN(heightNum) || heightNum < 100 || heightNum > 999) {
+      heightError = 'Height must be between 100 and 999';
+    }
+
+    return {
+      isValid: !widthError && !heightError,
+      widthError,
+      heightError
+    };
   };
 
   return (
@@ -292,7 +322,10 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                   <Text style={styles.dimensionsLabel}>Dimensions</Text>
                   <View style={styles.inputsRow}>
                     <TextInput
-                      style={styles.input}
+                      style={[
+                        styles.input,
+                        widthError ? styles.inputError : null
+                      ]}
                       keyboardType="numeric"
                       value={width}
                       onChangeText={setWidth}
@@ -301,7 +334,10 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                     />
                     <Text style={styles.xLabel}>x</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[
+                        styles.input,
+                        heightError ? styles.inputError : null
+                      ]}
                       keyboardType="numeric"
                       value={height}
                       onChangeText={setHeight}
@@ -310,6 +346,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                     />
                   </View>
                 </View>
+                {(widthError || heightError) && (
+                  <Text style={styles.errorText}>
+                    {widthError || heightError}
+                  </Text>
+                )}
                 <View style={styles.toggleContainer}>
                   <Text style={styles.toggleLabel}>Greyscale</Text>
                   <Switch
@@ -490,5 +531,13 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 14,
+    marginTop: 5,
   },
 });
