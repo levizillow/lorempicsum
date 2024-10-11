@@ -1,18 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Platform, TextInput, Switch } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, TouchableWithoutFeedback, Animated } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const imageWidth = width;
-const imageHeight = (600 / 900) * width; // Maintain aspect ratio
+const imageHeight = (600 / 900) * width;
 
 interface ImageItem {
   id: string;
   uri: string;
   photographer: string;
+  width: number;
+  height: number;
+}
+
+function LoadingIndicator() {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#1A1A1A" />
+    </View>
+  );
 }
 
 function TitleBar({ onFilterPress }) {
@@ -26,33 +36,32 @@ function TitleBar({ onFilterPress }) {
   );
 }
 
-function LoadingIndicator() {
-  return (
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="medium" color="#1A1A1A" />
-    </View>
-  );
-}
-
-function ImageList() {
+function ImageList({ imageDimensions, onImagesFetched }) {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const screenWidth = Dimensions.get('window').width;
 
   useEffect(() => {
     fetchImages();
-  }, []);
+  }, [imageDimensions]);
 
   const fetchImageAndPhotographer = async (index: number): Promise<ImageItem> => {
+    const { width, height } = imageDimensions;
+    const aspectRatio = width / height;
+    const scaledHeight = screenWidth / aspectRatio;
+
     const randomNumber = Math.floor(1000 + Math.random() * 9000);
-    const response = await fetch(`https://picsum.photos/900/600?random=${randomNumber}`);
+    const response = await fetch(`https://picsum.photos/${width}/${height}?random=${randomNumber}`);
     const imageUrl = response.url;
     const id = imageUrl.split('/')[4];
     const infoResponse = await fetch(`https://picsum.photos/id/${id}/info`);
     const infoData = await infoResponse.json();
     return {
       id: `image-${index}`,
-      uri: `https://picsum.photos/id/${id}/900/600`,
+      uri: `https://picsum.photos/id/${id}/${width}/${height}`,
       photographer: infoData.author,
+      width: screenWidth,
+      height: scaledHeight,
     };
   };
 
@@ -62,6 +71,7 @@ function ImageList() {
       const newImages = await Promise.all(imagePromises);
       setImages(newImages);
       setLoading(false);
+      onImagesFetched();
     } catch (error) {
       console.error('Error fetching images:', error);
       setLoading(false);
@@ -70,7 +80,7 @@ function ImageList() {
 
   const renderItem = ({ item }: { item: ImageItem }) => (
     <View style={styles.imageContainer}>
-      <Image source={{ uri: item.uri }} style={styles.image} />
+      <Image source={{ uri: item.uri }} style={[styles.image, { width: item.width, height: item.height }]} />
       <View style={styles.photographerPill}>
         <Text style={styles.photographerText}>{item.photographer}</Text>
       </View>
@@ -94,28 +104,45 @@ function ImageList() {
 function AppContent() {
   const insets = useSafeAreaInsets();
   const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState({ width: 900, height: 600 });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleFilterPress = () => {
     setBottomSheetVisible(true);
   };
 
-  const handleBottomSheetClose = () => {
+  const handleBottomSheetClose = (newDimensions) => {
     setBottomSheetVisible(false);
+    if (newDimensions) {
+      setImageDimensions(newDimensions);
+      setIsLoading(true);
+    }
   };
 
-  const titleBarHeight = 60; // Adjust this value to match your title bar height
+  const handleImagesFetched = () => {
+    setIsLoading(false);
+  };
+
+  const titleBarHeight = 60;
   const topInset = Platform.OS === 'ios' ? titleBarHeight : insets.top + titleBarHeight;
   const bottomInset = Math.max(insets.bottom || 0, 0);
 
   return (
     <View style={styles.container}>
       <TitleBar onFilterPress={handleFilterPress} />
-      <ImageList />
+      <View style={styles.contentContainer}>
+        {isLoading ? (
+          <LoadingIndicator />
+        ) : (
+          <ImageList imageDimensions={imageDimensions} onImagesFetched={handleImagesFetched} />
+        )}
+      </View>
       <BottomSheet 
         visible={bottomSheetVisible} 
         onClose={handleBottomSheetClose} 
         topInset={topInset}
         bottomInset={bottomInset}
+        currentDimensions={imageDimensions}
       />
     </View>
   );
@@ -123,23 +150,28 @@ function AppContent() {
 
 interface BottomSheetProps {
   visible: boolean;
-  onClose: () => void;
+  onClose: (newDimensions?: { width: number; height: number }) => void;
   topInset: number;
   bottomInset: number;
+  currentDimensions: { width: number; height: number };
 }
 
-const SHEET_HEIGHT = 300;
-
-const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, bottomInset }) => {
+const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, bottomInset, currentDimensions }) => {
   const [contentHeight, setContentHeight] = useState(0);
   const slideAnim = useRef(new Animated.Value(contentHeight)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [width, setWidth] = useState(currentDimensions.width.toString());
+  const [height, setHeight] = useState(currentDimensions.height.toString());
+  const [isGreyscale, setIsGreyscale] = useState(false);
+  const [isBlur, setIsBlur] = useState(false);
 
   const safeBottomInset = isNaN(bottomInset) ? 0 : Math.max(bottomInset, 0);
   const totalHeight = contentHeight + safeBottomInset;
 
   useEffect(() => {
     if (visible) {
+      setWidth(currentDimensions.width.toString());
+      setHeight(currentDimensions.height.toString());
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
@@ -166,7 +198,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
         })
       ]).start();
     }
-  }, [visible, totalHeight]);
+  }, [visible, totalHeight, currentDimensions]);
 
   const translateY = slideAnim.interpolate({
     inputRange: [0, totalHeight],
@@ -174,10 +206,20 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
     extrapolate: 'clamp',
   });
 
+  const handleDone = () => {
+    const newWidth = parseInt(width);
+    const newHeight = parseInt(height);
+    if (!isNaN(newWidth) && !isNaN(newHeight) && (newWidth !== currentDimensions.width || newHeight !== currentDimensions.height)) {
+      onClose({ width: newWidth, height: newHeight });
+    } else {
+      onClose();
+    }
+  };
+
   if (!visible && fadeAnim._value === 0) return null;
 
   return (
-    <TouchableWithoutFeedback onPress={onClose}>
+    <TouchableWithoutFeedback onPress={() => onClose()}>
       <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
         <Animated.View 
           style={[
@@ -205,11 +247,41 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                 setContentHeight(height);
               }}
             >
-              {/* Content of the bottom sheet goes here */}
               <View style={styles.contentPadding}>
-                <Text>Options content goes here</Text>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Width</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={width}
+                    onChangeText={setWidth}
+                  />
+                </View>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Height</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={height}
+                    onChangeText={setHeight}
+                  />
+                </View>
+                <View style={styles.toggleContainer}>
+                  <Text style={styles.toggleLabel}>Greyscale</Text>
+                  <Switch
+                    value={isGreyscale}
+                    onValueChange={setIsGreyscale}
+                  />
+                </View>
+                <View style={styles.toggleContainer}>
+                  <Text style={styles.toggleLabel}>Blur</Text>
+                  <Switch
+                    value={isBlur}
+                    onValueChange={setIsBlur}
+                  />
+                </View>
               </View>
-              <TouchableOpacity style={styles.doneButton} onPress={onClose}>
+              <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
                 <Text style={styles.doneButtonText}>Done</Text>
               </TouchableOpacity>
             </View>
@@ -219,6 +291,34 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
     </TouchableWithoutFeedback>
   );
 };
+
+export default function App() {
+  const [fontLoaded, setFontLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadFonts() {
+      await Font.loadAsync({
+        'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
+        'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
+      });
+      setFontLoaded(true);
+    }
+    loadFonts();
+  }, []);
+
+  if (!fontLoaded) {
+    return <LoadingIndicator />;
+  }
+
+  return (
+    <SafeAreaProvider>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <SafeAreaView style={styles.container} edges={['right', 'left', 'top']}>
+        <AppContent />
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -243,7 +343,7 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   listContainer: {
-    paddingTop: 10,  // Add some padding at the top of the list
+    paddingTop: 10,
     paddingBottom: 20,
   },
   imageContainer: {
@@ -258,14 +358,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     left: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Lighter background (was 0.6)
-    paddingVertical: 4, // Slightly reduced vertical padding
-    paddingHorizontal: 8, // Slightly reduced horizontal padding
-    borderRadius: 16, // Adjusted for smaller text
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 16,
   },
   photographerText: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 12, // Reduced from 16 to 12
+    fontSize: 12,
     color: '#FFFFFF',
   },
   loadingContainer: {
@@ -293,10 +393,39 @@ const styles = StyleSheet.create({
   },
   contentPadding: {
     paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 20,
   },
+  inputContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    color: '#1A1A1A',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 10,
+    padding: 8,
+    width: 100,
+    textAlign: 'right',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    color: '#1A1A1A',
+  },
   doneButton: {
-    backgroundColor: '#1A1A1A', // Same color as title text
+    backgroundColor: '#1A1A1A',
     padding: 15,
     alignItems: 'center',
     marginHorizontal: 20,
@@ -309,37 +438,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
-export default function App() {
-  const [fontLoaded, setFontLoaded] = useState(false);
-  const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
-
-  useEffect(() => {
-    async function loadFonts() {
-      await Font.loadAsync({
-        'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
-        'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
-      });
-      setFontLoaded(true);
-    }
-    loadFonts();
-  }, []);
-
-  const toggleBottomSheet = () => {
-    setBottomSheetVisible(!bottomSheetVisible);
-  };
-
-  if (!fontLoaded) {
-    return <LoadingIndicator />;
-  }
-
-  return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <SafeAreaView style={styles.container} edges={['right', 'left', 'top']}>
-        <AppContent />
-        <BottomSheet visible={bottomSheetVisible} onClose={() => setBottomSheetVisible(false)} topInset={60} />
-      </SafeAreaView>
-    </SafeAreaProvider>
-  );
-}
