@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, Platform, StatusBar } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import * as Font from 'expo-font';
 
 const { width } = Dimensions.get('window');
 const imageWidth = width;
@@ -58,6 +59,22 @@ function ImageList() {
 }
 
 export default function App() {
+  const [fontLoaded, setFontLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadFont() {
+      await Font.loadAsync({
+        'BebasNeue-Regular': require('./assets/fonts/BebasNeue-Regular.ttf'),
+      });
+      setFontLoaded(true);
+    }
+    loadFont();
+  }, []);
+
+  if (!fontLoaded) {
+    return <ActivityIndicator size="large" color="#0000ff" />;
+  }
+
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -82,8 +99,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#CCCCCC',
   },
   titleText: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'BebasNeue-Regular',
+    fontSize: 24,
+    fontWeight: 'normal',
   },
   listContainer: {
     // Remove paddingTop: 10,
