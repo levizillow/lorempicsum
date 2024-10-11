@@ -256,27 +256,27 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
               }}
             >
               <View style={styles.contentPadding}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Width</Text>
-                  <TextInput
-                    style={styles.input}
-                    keyboardType="numeric"
-                    value={width}
-                    onChangeText={setWidth}
-                    onFocus={() => setIsInputFocused(true)}
-                    onBlur={() => setIsInputFocused(false)}
-                  />
-                </View>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Height</Text>
-                  <TextInput
-                    style={styles.input}
-                    keyboardType="numeric"
-                    value={height}
-                    onChangeText={setHeight}
-                    onFocus={() => setIsInputFocused(true)}
-                    onBlur={() => setIsInputFocused(false)}
-                  />
+                <View style={styles.dimensionsContainer}>
+                  <Text style={styles.dimensionsLabel}>Dimensions</Text>
+                  <View style={styles.inputsRow}>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="numeric"
+                      value={width}
+                      onChangeText={setWidth}
+                      onFocus={() => setIsInputFocused(true)}
+                      onBlur={() => setIsInputFocused(false)}
+                    />
+                    <Text style={styles.xLabel}>x</Text>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="numeric"
+                      value={height}
+                      onChangeText={setHeight}
+                      onFocus={() => setIsInputFocused(true)}
+                      onBlur={() => setIsInputFocused(false)}
+                    />
+                  </View>
                 </View>
                 <View style={styles.toggleContainer}>
                   <Text style={styles.toggleLabel}>Greyscale</Text>
@@ -408,23 +408,33 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20,
   },
-  inputContainer: {
+  dimensionsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
   },
-  inputLabel: {
+  dimensionsLabel: {
     fontSize: 16,
     color: '#1A1A1A',
+    marginRight: 10,
+  },
+  inputsRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   input: {
+    flex: 1,
     borderWidth: 1,
     borderColor: '#CCCCCC',
     borderRadius: 10,
     padding: 8,
-    width: 100,
-    textAlign: 'right',
+    textAlign: 'center',
+  },
+  xLabel: {
+    fontSize: 16,
+    color: '#1A1A1A',
+    marginHorizontal: 8,
   },
   toggleContainer: {
     flexDirection: 'row',
