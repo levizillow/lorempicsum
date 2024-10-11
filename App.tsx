@@ -105,8 +105,7 @@ function AppContent() {
 
   const titleBarHeight = 60; // Adjust this value to match your title bar height
   const topInset = Platform.OS === 'ios' ? titleBarHeight : insets.top + titleBarHeight;
-
-  const bottomInset = Math.max(insets.bottom || 0, 0); // Ensure it's always a non-negative number
+  const bottomInset = Math.max(insets.bottom || 0, 0);
 
   return (
     <View style={styles.container}>
@@ -126,18 +125,18 @@ interface BottomSheetProps {
   visible: boolean;
   onClose: () => void;
   topInset: number;
-  bottomInset: number; // Add this prop
+  bottomInset: number;
 }
 
 const SHEET_HEIGHT = 300;
 
 const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, bottomInset }) => {
-  const slideAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
+  const [contentHeight, setContentHeight] = useState(0);
+  const slideAnim = useRef(new Animated.Value(contentHeight)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Ensure bottomInset is a valid number
   const safeBottomInset = isNaN(bottomInset) ? 0 : Math.max(bottomInset, 0);
-  const totalHeight = SHEET_HEIGHT + safeBottomInset;
+  const totalHeight = contentHeight + safeBottomInset;
 
   useEffect(() => {
     if (visible) {
@@ -194,14 +193,25 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
             styles.bottomSheet,
             { 
               transform: [{ translateY }],
-              height: totalHeight,
               paddingBottom: safeBottomInset,
             }
           ]}
         >
           <TouchableWithoutFeedback>
-            <View style={styles.bottomSheetContent}>
+            <View 
+              style={styles.bottomSheetContent}
+              onLayout={(event) => {
+                const { height } = event.nativeEvent.layout;
+                setContentHeight(height);
+              }}
+            >
               {/* Content of the bottom sheet goes here */}
+              <View style={styles.contentPadding}>
+                <Text>Options content goes here</Text>
+              </View>
+              <TouchableOpacity style={styles.doneButton} onPress={onClose}>
+                <Text style={styles.doneButtonText}>Done</Text>
+              </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
         </Animated.View>
@@ -280,6 +290,23 @@ const styles = StyleSheet.create({
   },
   bottomSheetContent: {
     flex: 1,
+  },
+  contentPadding: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  doneButton: {
+    backgroundColor: '#1A1A1A', // Same color as title text
+    padding: 15,
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 10,
+  },
+  doneButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
