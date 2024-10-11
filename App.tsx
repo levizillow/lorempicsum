@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
+import { Modal, TouchableWithoutFeedback, Animated } from 'react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const imageWidth = width;
 const imageHeight = (600 / 900) * width; // Maintain aspect ratio
 
@@ -14,12 +15,12 @@ interface ImageItem {
   photographer: string;
 }
 
-function TitleBar() {
+function TitleBar({ onFilterPress }) {
   return (
     <View style={styles.titleBar}>
       <Text style={styles.titleText}>Proto Photo</Text>
-      <TouchableOpacity style={styles.filterButton} onPress={() => {}}>
-        <Ionicons name="options" size={24} color="#1A1A1A" />
+      <TouchableOpacity style={styles.filterButton} onPress={onFilterPress}>
+        <Ionicons name="options-outline" size={24} color="#1A1A1A" />
       </TouchableOpacity>
     </View>
   );
@@ -92,45 +93,104 @@ function ImageList() {
 
 function AppContent() {
   const insets = useSafeAreaInsets();
+  const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
+
+  const handleFilterPress = () => {
+    setBottomSheetVisible(true);
+  };
+
+  const handleBottomSheetClose = () => {
+    setBottomSheetVisible(false);
+  };
+
+  const titleBarHeight = 60; // Adjust this value to match your title bar height
+  const topInset = Platform.OS === 'ios' ? titleBarHeight : insets.top + titleBarHeight;
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <TitleBar />
+      <TitleBar onFilterPress={handleFilterPress} />
       <ImageList />
+      <BottomSheet 
+        visible={bottomSheetVisible} 
+        onClose={handleBottomSheetClose} 
+        topInset={topInset}
+      />
     </View>
   );
 }
 
-export default function App() {
-  const [fontLoaded, setFontLoaded] = useState(false);
+interface BottomSheetProps {
+  visible: boolean;
+  onClose: () => void;
+  topInset: number; // Add this prop to account for the title bar height
+}
+
+const SHEET_HEIGHT = 300;
+
+const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset }) => {
+  const slideAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    async function loadFonts() {
-      await Font.loadAsync({
-        'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
-        'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
-      });
-      setFontLoaded(true);
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0.7,
+          duration: 300,
+          useNativeDriver: true,
+        })
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: SHEET_HEIGHT,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        })
+      ]).start();
     }
-    loadFonts();
-  }, []);
+  }, [visible]);
 
-  if (!fontLoaded) {
-    return <LoadingIndicator />;
-  }
+  if (!visible && fadeAnim._value === 0) return null;
 
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <SafeAreaView style={styles.container} edges={['right', 'left', 'top']}>
-        <TitleBar />
-        <View style={styles.contentContainer}>
-          <ImageList />
-        </View>
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <TouchableWithoutFeedback onPress={onClose}>
+      <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
+        <Animated.View 
+          style={[
+            styles.overlay,
+            { 
+              opacity: fadeAnim,
+              top: topInset, // Position the overlay below the title bar
+            }
+          ]}
+        />
+        <Animated.View 
+          style={[
+            styles.bottomSheet,
+            { transform: [{ translateY: slideAnim }] }
+          ]}
+        >
+          <TouchableWithoutFeedback>
+            <View style={styles.bottomSheetContent}>
+              {/* Content of the bottom sheet goes here */}
+            </View>
+          </TouchableWithoutFeedback>
+        </Animated.View>
+      </View>
+    </TouchableWithoutFeedback>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -187,4 +247,55 @@ const styles = StyleSheet.create({
   filterButton: {
     padding: 8,
   },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'black',
+  },
+  bottomSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: SHEET_HEIGHT,
+  },
+  bottomSheetContent: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
 });
+
+export default function App() {
+  const [fontLoaded, setFontLoaded] = useState(false);
+  const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
+
+  useEffect(() => {
+    async function loadFonts() {
+      await Font.loadAsync({
+        'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
+        'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
+      });
+      setFontLoaded(true);
+    }
+    loadFonts();
+  }, []);
+
+  const toggleBottomSheet = () => {
+    setBottomSheetVisible(!bottomSheetVisible);
+  };
+
+  if (!fontLoaded) {
+    return <LoadingIndicator />;
+  }
+
+  return (
+    <SafeAreaProvider>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <SafeAreaView style={styles.container} edges={['right', 'left', 'top']}>
+        <AppContent />
+        <BottomSheet visible={bottomSheetVisible} onClose={() => setBottomSheetVisible(false)} topInset={60} />
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
+}
