@@ -1,4 +1,5 @@
 {
+  "name": "protophoto",
   "dependencies": {
     "expo": "^51.0.37",
     "expo-font": "^12.0.10",

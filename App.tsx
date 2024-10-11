@@ -15,7 +15,7 @@ interface ImageItem {
 function TitleBar() {
   return (
     <View style={styles.titleBar}>
-      <Text style={styles.titleText}>Lorem Picsum</Text>
+      <Text style={styles.titleText}>Proto Photo</Text>
     </View>
   );
 }
