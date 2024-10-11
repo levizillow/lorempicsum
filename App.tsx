@@ -106,14 +106,17 @@ function AppContent() {
   const titleBarHeight = 60; // Adjust this value to match your title bar height
   const topInset = Platform.OS === 'ios' ? titleBarHeight : insets.top + titleBarHeight;
 
+  const bottomInset = Math.max(insets.bottom || 0, 0); // Ensure it's always a non-negative number
+
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <TitleBar onFilterPress={handleFilterPress} />
       <ImageList />
       <BottomSheet 
         visible={bottomSheetVisible} 
         onClose={handleBottomSheetClose} 
         topInset={topInset}
+        bottomInset={bottomInset}
       />
     </View>
   );
@@ -122,14 +125,19 @@ function AppContent() {
 interface BottomSheetProps {
   visible: boolean;
   onClose: () => void;
-  topInset: number; // Add this prop to account for the title bar height
+  topInset: number;
+  bottomInset: number; // Add this prop
 }
 
 const SHEET_HEIGHT = 300;
 
-const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset }) => {
+const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, bottomInset }) => {
   const slideAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Ensure bottomInset is a valid number
+  const safeBottomInset = isNaN(bottomInset) ? 0 : Math.max(bottomInset, 0);
+  const totalHeight = SHEET_HEIGHT + safeBottomInset;
 
   useEffect(() => {
     if (visible) {
@@ -148,7 +156,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset })
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
-          toValue: SHEET_HEIGHT,
+          toValue: totalHeight,
           duration: 300,
           useNativeDriver: true,
         }),
@@ -159,7 +167,13 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset })
         })
       ]).start();
     }
-  }, [visible]);
+  }, [visible, totalHeight]);
+
+  const translateY = slideAnim.interpolate({
+    inputRange: [0, totalHeight],
+    outputRange: [0, totalHeight],
+    extrapolate: 'clamp',
+  });
 
   if (!visible && fadeAnim._value === 0) return null;
 
@@ -171,14 +185,18 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset })
             styles.overlay,
             { 
               opacity: fadeAnim,
-              top: topInset, // Position the overlay below the title bar
+              top: topInset,
             }
           ]}
         />
         <Animated.View 
           style={[
             styles.bottomSheet,
-            { transform: [{ translateY: slideAnim }] }
+            { 
+              transform: [{ translateY }],
+              height: totalHeight,
+              paddingBottom: safeBottomInset,
+            }
           ]}
         >
           <TouchableWithoutFeedback>
@@ -256,13 +274,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: SHEET_HEIGHT,
-  },
-  bottomSheetContent: {
-    flex: 1,
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+  },
+  bottomSheetContent: {
+    flex: 1,
   },
 });
 
