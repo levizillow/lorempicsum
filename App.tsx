@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Platform, TextInput, Switch, Keyboard } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
@@ -8,6 +8,15 @@ import { Modal, TouchableWithoutFeedback, Animated } from 'react-native';
 const { width } = Dimensions.get('window');
 const imageWidth = width;
 const imageHeight = (600 / 900) * width;
+
+const screenWidth = Dimensions.get('window').width;
+
+function calculateScaledDimensions(originalWidth: number, originalHeight: number): { width: number, height: number } {
+  const aspectRatio = originalHeight / originalWidth;
+  const scaledWidth = screenWidth;
+  const scaledHeight = scaledWidth * aspectRatio;
+  return { width: scaledWidth, height: scaledHeight };
+}
 
 interface ImageItem {
   id: string;
@@ -36,60 +45,22 @@ function TitleBar({ onFilterPress }) {
   );
 }
 
-function ImageList({ imageDimensions, onImagesFetched }) {
-  const [images, setImages] = useState<ImageItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const screenWidth = Dimensions.get('window').width;
-
-  useEffect(() => {
-    fetchImages();
-  }, [imageDimensions]);
-
-  const fetchImageAndPhotographer = async (index: number): Promise<ImageItem> => {
-    const { width, height } = imageDimensions;
-    const aspectRatio = width / height;
-    const scaledHeight = screenWidth / aspectRatio;
-
-    const randomNumber = Math.floor(1000 + Math.random() * 9000);
-    const response = await fetch(`https://picsum.photos/${width}/${height}?random=${randomNumber}`);
-    const imageUrl = response.url;
-    const id = imageUrl.split('/')[4];
-    const infoResponse = await fetch(`https://picsum.photos/id/${id}/info`);
-    const infoData = await infoResponse.json();
-    return {
-      id: `image-${index}`,
-      uri: `https://picsum.photos/id/${id}/${width}/${height}`,
-      photographer: infoData.author,
-      width: screenWidth,
-      height: scaledHeight,
-    };
-  };
-
-  const fetchImages = async () => {
-    try {
-      const imagePromises = Array.from({ length: 10 }, (_, i) => fetchImageAndPhotographer(i));
-      const newImages = await Promise.all(imagePromises);
-      setImages(newImages);
-      setLoading(false);
-      onImagesFetched();
-    } catch (error) {
-      console.error('Error fetching images:', error);
-      setLoading(false);
-    }
-  };
+function ImageList({ images, loading, imageDimensions }) {
+  if (loading) {
+    return <LoadingIndicator />;
+  }
 
   const renderItem = ({ item }: { item: ImageItem }) => (
     <View style={styles.imageContainer}>
-      <Image source={{ uri: item.uri }} style={[styles.image, { width: item.width, height: item.height }]} />
+      <Image 
+        source={{ uri: item.uri }} 
+        style={[styles.image, { width: item.width, height: item.height }]}
+      />
       <View style={styles.photographerPill}>
         <Text style={styles.photographerText}>{item.photographer}</Text>
       </View>
     </View>
   );
-
-  if (loading) {
-    return <LoadingIndicator />;
-  }
 
   return (
     <FlatList
@@ -105,22 +76,59 @@ function AppContent() {
   const insets = useSafeAreaInsets();
   const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
   const [imageDimensions, setImageDimensions] = useState({ width: 900, height: 600 });
-  const [isLoading, setIsLoading] = useState(false);
+  const [images, setImages] = useState<ImageItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refreshImages = useCallback(async (newDimensions?: { width: number; height: number }) => {
+    setLoading(true);
+    setImages([]);
+    
+    const dimensions = newDimensions || imageDimensions;
+    
+    try {
+      const newImages = await Promise.all(
+        Array.from({ length: 10 }, (_, i) => fetchImageAndPhotographer(i, dimensions))
+      );
+      setImages(newImages);
+    } catch (error) {
+      console.error('Error fetching images:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [imageDimensions]);
+
+  const fetchImageAndPhotographer = async (index: number, dimensions: { width: number; height: number }): Promise<ImageItem> => {
+    const { width, height } = dimensions;
+    const randomNumber = Math.floor(1000 + Math.random() * 9000);
+    const response = await fetch(`https://picsum.photos/${width}/${height}?random=${randomNumber}`);
+    const imageUrl = response.url;
+    const id = imageUrl.split('/')[4];
+    const infoResponse = await fetch(`https://picsum.photos/id/${id}/info`);
+    const infoData = await infoResponse.json();
+    const scaledDimensions = calculateScaledDimensions(width, height);
+    return {
+      id: `image-${index}`,
+      uri: `https://picsum.photos/id/${id}/${width}/${height}`,
+      photographer: infoData.author,
+      width: scaledDimensions.width,
+      height: scaledDimensions.height,
+    };
+  };
+
+  useEffect(() => {
+    refreshImages();
+  }, [refreshImages]);
 
   const handleFilterPress = () => {
     setBottomSheetVisible(true);
   };
 
-  const handleBottomSheetClose = (newDimensions) => {
+  const handleBottomSheetClose = (newDimensions?: { width: number; height: number }) => {
     setBottomSheetVisible(false);
     if (newDimensions) {
       setImageDimensions(newDimensions);
-      setIsLoading(true);
+      refreshImages(newDimensions);
     }
-  };
-
-  const handleImagesFetched = () => {
-    setIsLoading(false);
   };
 
   const titleBarHeight = 60;
@@ -131,11 +139,7 @@ function AppContent() {
     <View style={styles.container}>
       <TitleBar onFilterPress={handleFilterPress} />
       <View style={styles.contentContainer}>
-        {isLoading ? (
-          <LoadingIndicator />
-        ) : (
-          <ImageList imageDimensions={imageDimensions} onImagesFetched={handleImagesFetched} />
-        )}
+        <ImageList images={images} loading={loading} imageDimensions={imageDimensions} />
       </View>
       <BottomSheet 
         visible={bottomSheetVisible} 
