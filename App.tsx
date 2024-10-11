@@ -158,16 +158,41 @@ interface BottomSheetProps {
 
 const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, bottomInset, currentDimensions }) => {
   const [contentHeight, setContentHeight] = useState(0);
-  const slideAnim = useRef(new Animated.Value(contentHeight)).current;
+  const slideAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [width, setWidth] = useState(currentDimensions.width.toString());
   const [height, setHeight] = useState(currentDimensions.height.toString());
   const [isGreyscale, setIsGreyscale] = useState(false);
   const [isBlur, setIsBlur] = useState(false);
-  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const safeBottomInset = isNaN(bottomInset) ? 0 : Math.max(bottomInset, 0);
   const totalHeight = contentHeight + safeBottomInset;
+
+  useEffect(() => {
+    const keyboardWillShow = (e: KeyboardEvent) => {
+      if (Platform.OS === 'ios') {
+        setKeyboardHeight(e.endCoordinates.height);
+        setIsKeyboardVisible(true);
+      }
+    };
+
+    const keyboardWillHide = () => {
+      if (Platform.OS === 'ios') {
+        setKeyboardHeight(0);
+        setIsKeyboardVisible(false);
+      }
+    };
+
+    const keyboardWillShowListener = Keyboard.addListener('keyboardWillShow', keyboardWillShow);
+    const keyboardWillHideListener = Keyboard.addListener('keyboardWillHide', keyboardWillHide);
+
+    return () => {
+      keyboardWillShowListener.remove();
+      keyboardWillHideListener.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -188,7 +213,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
-          toValue: totalHeight,
+          toValue: 1,
           duration: 300,
           useNativeDriver: true,
         }),
@@ -202,14 +227,16 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
   }, [visible, totalHeight, currentDimensions]);
 
   const translateY = slideAnim.interpolate({
-    inputRange: [0, totalHeight],
-    outputRange: [0, totalHeight],
+    inputRange: [0, 1],
+    outputRange: [
+      Platform.OS === 'ios' ? (isKeyboardVisible ? -keyboardHeight : 0) : 0,
+      totalHeight
+    ],
     extrapolate: 'clamp',
   });
 
   const handleDone = () => {
     Keyboard.dismiss();
-    setIsInputFocused(false);
     const newWidth = parseInt(width);
     const newHeight = parseInt(height);
     if (!isNaN(newWidth) && !isNaN(newHeight) && (newWidth !== currentDimensions.width || newHeight !== currentDimensions.height)) {
@@ -218,8 +245,6 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
       onClose();
     }
   };
-
-  if (!visible && fadeAnim._value === 0) return null;
 
   return (
     <TouchableWithoutFeedback onPress={() => onClose()}>
@@ -242,12 +267,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
             }
           ]}
         >
-          <TouchableWithoutFeedback onPress={() => {
-            if (isInputFocused) {
-              Keyboard.dismiss();
-              setIsInputFocused(false);
-            }
-          }}>
+          <TouchableWithoutFeedback>
             <View 
               style={styles.bottomSheetContent}
               onLayout={(event) => {
@@ -264,8 +284,6 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                       keyboardType="numeric"
                       value={width}
                       onChangeText={setWidth}
-                      onFocus={() => setIsInputFocused(true)}
-                      onBlur={() => setIsInputFocused(false)}
                     />
                     <Text style={styles.xLabel}>x</Text>
                     <TextInput
@@ -273,8 +291,6 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                       keyboardType="numeric"
                       value={height}
                       onChangeText={setHeight}
-                      onFocus={() => setIsInputFocused(true)}
-                      onBlur={() => setIsInputFocused(false)}
                     />
                   </View>
                 </View>
