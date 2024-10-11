@@ -21,6 +21,14 @@ function TitleBar() {
   );
 }
 
+function LoadingIndicator() {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="medium" color="#1A1A1A" />
+    </View>
+  );
+}
+
 function ImageList() {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +73,7 @@ function ImageList() {
   );
 
   if (loading) {
-    return <ActivityIndicator size="large" color="#0000ff" />;
+    return <LoadingIndicator />;
   }
 
   return (
@@ -104,7 +112,7 @@ export default function App() {
   }, []);
 
   if (!fontLoaded) {
-    return <ActivityIndicator size="large" color="#0000ff" />;
+    return <LoadingIndicator />;
   }
 
   return (
@@ -141,6 +149,7 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   listContainer: {
+    paddingTop: 10,  // Add some padding at the top of the list
     paddingBottom: 20,
   },
   imageContainer: {
@@ -164,5 +173,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 12, // Reduced from 16 to 12
     color: '#FFFFFF',
+  },
+  loadingContainer: {
+    paddingTop: 20, // Adjust this value to position the indicator below the title bar
+    alignItems: 'center',
   },
 });
