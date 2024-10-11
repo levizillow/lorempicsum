@@ -86,12 +86,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   listContainer: {
-    paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: 20, // Keep bottom padding
+    // Remove paddingTop
   },
   image: {
     width: imageWidth,
     height: imageHeight,
-    marginBottom: 10,
+    marginBottom: 10, // This maintains space between images
   },
 });
