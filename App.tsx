@@ -20,7 +20,7 @@ interface ImageItem {
 function LoadingIndicator() {
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#1A1A1A" />
+      <ActivityIndicator size="medium" color="#1A1A1A" />
     </View>
   );
 }
