@@ -262,7 +262,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
             styles.overlay,
             { 
               opacity: fadeAnim,
-              top: topInset,
+              top: topInset, // This ensures the overlay starts below the title bar
             }
           ]}
         />
