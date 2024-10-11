@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, Platform, StatusBar } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar } from 'react-native';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 
 const { width } = Dimensions.get('window');
@@ -58,13 +58,24 @@ function ImageList() {
   );
 }
 
+function AppContent() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+      <TitleBar />
+      <ImageList />
+    </View>
+  );
+}
+
 export default function App() {
   const [fontLoaded, setFontLoaded] = useState(false);
 
   useEffect(() => {
     async function loadFont() {
       await Font.loadAsync({
-        'BebasNeue-Regular': require('./assets/fonts/BebasNeue-Regular.ttf'),
+        'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
       });
       setFontLoaded(true);
     }
@@ -78,9 +89,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['right', 'left', 'top']}>
         <TitleBar />
-        <ImageList />
+        <View style={styles.contentContainer}>
+          <ImageList />
+        </View>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -91,6 +104,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  contentContainer: {
+    flex: 1,
+  },
   titleBar: {
     height: 60,
     justifyContent: 'center',
@@ -99,9 +115,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#CCCCCC',
   },
   titleText: {
-    fontFamily: 'BebasNeue-Regular',
+    fontFamily: 'Poppins-Bold',
     fontSize: 24,
-    fontWeight: 'normal',
+    color: '#1A1A1A', // This sets the color to a darker shade
   },
   listContainer: {
     // Remove paddingTop: 10,
