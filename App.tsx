@@ -274,11 +274,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
     let widthError = '';
     let heightError = '';
 
-    if (isNaN(widthNum) || widthNum < 400 || widthNum > 999) {
-      widthError = 'Width must be between 400 and 999';
+    if (isNaN(widthNum) || widthNum < 100 || widthNum > 1000) {
+      widthError = 'Width must be between 100 and 1000';
     }
-    if (isNaN(heightNum) || heightNum < 100 || heightNum > 999) {
-      heightError = 'Height must be between 100 and 999';
+    if (isNaN(heightNum) || heightNum < 100 || heightNum > 1000) {
+      heightError = 'Height must be between 100 and 1000';
     }
 
     return {
@@ -479,7 +479,8 @@ const styles = StyleSheet.create({
     marginBottom: 5, // Small space between the inputs and potential error message
   },
   dimensionsLabel: {
-    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 15,
     color: '#1A1A1A',
     marginRight: 10, // Space between label and inputs
   },
@@ -500,13 +501,15 @@ const styles = StyleSheet.create({
     borderColor: 'red',
   },
   xLabel: {
-    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 15,
     color: '#1A1A1A',
     marginHorizontal: 8,
   },
   errorText: {
+    fontFamily: 'Poppins-Regular',
     color: 'red',
-    fontSize: 14,
+    fontSize: 12,
     marginTop: 5, // Space between inputs and error message
   },
   toggleContainer: {
@@ -516,7 +519,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   toggleLabel: {
-    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 15,
     color: '#1A1A1A',
   },
   doneButton: {
@@ -524,12 +528,12 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     marginHorizontal: 20,
-    marginBottom: 20,
     borderRadius: 10,
   },
   doneButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 15,
     fontWeight: 'bold',
   },
 });
