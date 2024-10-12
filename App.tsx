@@ -119,17 +119,19 @@ function AppContent() {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isBlur, setIsBlur] = useState(false);
+  const [isGreyscale, setIsGreyscale] = useState(false);
 
-  const refreshImages = useCallback(async (newDimensions?: { width: number; height: number }, newIsBlur?: boolean) => {
+  const refreshImages = useCallback(async (newDimensions?: { width: number; height: number }, newIsBlur?: boolean, newIsGreyscale?: boolean) => {
     setLoading(true);
     setImages([]);
     
     const dimensions = newDimensions || imageDimensions;
     const blurSetting = newIsBlur !== undefined ? newIsBlur : isBlur;
+    const greyscaleSetting = newIsGreyscale !== undefined ? newIsGreyscale : isGreyscale;
     
     try {
       const newImages = await Promise.all(
-        Array.from({ length: 10 }, (_, i) => fetchImageAndPhotographer(i, dimensions, blurSetting))
+        Array.from({ length: 10 }, (_, i) => fetchImageAndPhotographer(i, dimensions, blurSetting, greyscaleSetting))
       );
       setImages(newImages);
     } catch (error) {
@@ -137,13 +139,14 @@ function AppContent() {
     } finally {
       setLoading(false);
     }
-  }, [imageDimensions, isBlur]);
+  }, [imageDimensions, isBlur, isGreyscale]);
 
-  const fetchImageAndPhotographer = async (index: number, dimensions: { width: number; height: number }, blur: boolean): Promise<ImageItem> => {
+  const fetchImageAndPhotographer = async (index: number, dimensions: { width: number; height: number }, blur: boolean, greyscale: boolean): Promise<ImageItem> => {
     const { width, height } = dimensions;
     const randomNumber = Math.floor(1000 + Math.random() * 9000);
     const blurParam = blur ? '&blur=5' : '';
-    const response = await fetch(`https://picsum.photos/${width}/${height}?random=${randomNumber}${blurParam}`);
+    const greyscaleParam = greyscale ? '&grayscale' : '';
+    const response = await fetch(`https://picsum.photos/${width}/${height}?random=${randomNumber}${blurParam}${greyscaleParam}`);
     const imageUrl = response.url;
     const id = imageUrl.split('/')[4];
     const infoResponse = await fetch(`https://picsum.photos/id/${id}/info`);
@@ -151,7 +154,7 @@ function AppContent() {
     const scaledDimensions = calculateScaledDimensions(width, height);
     return {
       id: `image-${index}`,
-      uri: `https://picsum.photos/id/${id}/${width}/${height}${blur ? '?blur=5' : ''}`,
+      uri: `https://picsum.photos/id/${id}/${width}/${height}${blur ? '?blur=5' : ''}${greyscale ? (blur ? '&' : '?') + 'grayscale' : ''}`,
       photographer: infoData.author,
       width: scaledDimensions.width,
       height: scaledDimensions.height,
@@ -166,16 +169,19 @@ function AppContent() {
     setBottomSheetVisible(true);
   };
 
-  const handleBottomSheetClose = (newDimensions?: { width: number; height: number }, newIsBlur?: boolean) => {
+  const handleBottomSheetClose = (newDimensions?: { width: number; height: number }, newIsBlur?: boolean, newIsGreyscale?: boolean) => {
     setBottomSheetVisible(false);
-    if (newDimensions || newIsBlur !== undefined) {
+    if (newDimensions || newIsBlur !== undefined || newIsGreyscale !== undefined) {
       if (newDimensions) {
         setImageDimensions(newDimensions);
       }
       if (newIsBlur !== undefined) {
         setIsBlur(newIsBlur);
       }
-      refreshImages(newDimensions || imageDimensions, newIsBlur);
+      if (newIsGreyscale !== undefined) {
+        setIsGreyscale(newIsGreyscale);
+      }
+      refreshImages(newDimensions || imageDimensions, newIsBlur, newIsGreyscale);
     }
   };
 
@@ -202,6 +208,7 @@ function AppContent() {
         bottomInset={bottomInset}
         currentDimensions={imageDimensions}
         isBlur={isBlur}
+        isGreyscale={isGreyscale}
       />
     </View>
   );
@@ -209,20 +216,21 @@ function AppContent() {
 
 interface BottomSheetProps {
   visible: boolean;
-  onClose: (newDimensions?: { width: number; height: number }, newIsBlur?: boolean) => void;
+  onClose: (newDimensions?: { width: number; height: number }, newIsBlur?: boolean, newIsGreyscale?: boolean) => void;
   topInset: number;
   bottomInset: number;
   currentDimensions: { width: number; height: number };
   isBlur: boolean;
+  isGreyscale: boolean;
 }
 
-const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, bottomInset, currentDimensions, isBlur }) => {
+const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, bottomInset, currentDimensions, isBlur, isGreyscale }) => {
   const [contentHeight, setContentHeight] = useState(0);
   const slideAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [width, setWidth] = useState(currentDimensions.width.toString());
   const [height, setHeight] = useState(currentDimensions.height.toString());
-  const [isGreyscale, setIsGreyscale] = useState(false);
+  const [localIsGreyscale, setLocalIsGreyscale] = useState(isGreyscale);
   const [localIsBlur, setLocalIsBlur] = useState(isBlur);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -262,6 +270,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
       setWidth(currentDimensions.width.toString());
       setHeight(currentDimensions.height.toString());
       setLocalIsBlur(isBlur);
+      setLocalIsGreyscale(isGreyscale);
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
@@ -288,7 +297,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
         })
       ]).start();
     }
-  }, [visible, totalHeight, currentDimensions, isBlur]);
+  }, [visible, totalHeight, currentDimensions, isBlur, isGreyscale]);
 
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],
@@ -309,8 +318,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
     if (isValid) {
       const newWidth = parseInt(width);
       const newHeight = parseInt(height);
-      if (newWidth !== currentDimensions.width || newHeight !== currentDimensions.height || localIsBlur !== isBlur) {
-        onClose({ width: newWidth, height: newHeight }, localIsBlur);
+      if (newWidth !== currentDimensions.width || newHeight !== currentDimensions.height || localIsBlur !== isBlur || localIsGreyscale !== isGreyscale) {
+        onClose({ width: newWidth, height: newHeight }, localIsBlur, localIsGreyscale);
       } else {
         onClose();
       }
@@ -406,7 +415,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                 </View>
                 <View style={styles.toggleContainer}>
                   <Text style={styles.toggleLabel}>Greyscale</Text>
-                  <Switch value={isGreyscale} onValueChange={setIsGreyscale} />
+                  <Switch value={localIsGreyscale} onValueChange={setLocalIsGreyscale} />
                 </View>
                 <View style={styles.toggleContainer}>
                   <Text style={styles.toggleLabel}>Blur</Text>
