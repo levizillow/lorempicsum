@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Platform, TextInput, Switch, Keyboard } from 'react-native';
+import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Platform, TextInput, Switch, Keyboard, RefreshControl } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,7 +29,7 @@ interface ImageItem {
 function LoadingIndicator() {
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="medium" color="#1A1A1A" />
+      <ActivityIndicator size="large" color="#1A1A1A" />
     </View>
   );
 }
@@ -45,11 +45,7 @@ function TitleBar({ onFilterPress }) {
   );
 }
 
-function ImageList({ images, loading, imageDimensions }) {
-  if (loading) {
-    return <LoadingIndicator />;
-  }
-
+function ImageList({ images, loading, imageDimensions, onRefresh }) {
   const renderItem = ({ item }: { item: ImageItem }) => (
     <View style={styles.imageContainer}>
       <Image 
@@ -62,12 +58,23 @@ function ImageList({ images, loading, imageDimensions }) {
     </View>
   );
 
+  if (loading) {
+    return <LoadingIndicator />;
+  }
+
   return (
     <FlatList
       data={images}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.listContainer}
+      refreshControl={
+        <RefreshControl
+          refreshing={loading}
+          onRefresh={onRefresh}
+          tintColor="#1A1A1A"
+        />
+      }
     />
   );
 }
@@ -131,6 +138,12 @@ function AppContent() {
     }
   };
 
+  const handleRefresh = useCallback(() => {
+    setLoading(true);
+    setImages([]);
+    refreshImages();
+  }, [refreshImages]);
+
   const titleBarHeight = 60;
   const topInset = Platform.OS === 'ios' ? titleBarHeight : titleBarHeight;
   const bottomInset = Math.max(insets.bottom || 0, 0);
@@ -139,7 +152,7 @@ function AppContent() {
     <View style={styles.container}>
       <TitleBar onFilterPress={handleFilterPress} />
       <View style={styles.contentContainer}>
-        <ImageList images={images} loading={loading} imageDimensions={imageDimensions} />
+        <ImageList images={images} loading={loading} imageDimensions={imageDimensions} onRefresh={handleRefresh} />
       </View>
       <BottomSheet 
         visible={bottomSheetVisible} 
