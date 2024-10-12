@@ -319,51 +319,41 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
             >
               <View style={styles.contentPadding}>
                 <View style={styles.dimensionsContainer}>
-                  <Text style={styles.dimensionsLabel}>Dimensions</Text>
-                  <View style={styles.inputsRow}>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        widthError ? styles.inputError : null
-                      ]}
-                      keyboardType="numeric"
-                      value={width}
-                      onChangeText={setWidth}
-                      onFocus={() => setIsInputFocused(true)}
-                      onBlur={() => setIsInputFocused(false)}
-                    />
-                    <Text style={styles.xLabel}>x</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        heightError ? styles.inputError : null
-                      ]}
-                      keyboardType="numeric"
-                      value={height}
-                      onChangeText={setHeight}
-                      onFocus={() => setIsInputFocused(true)}
-                      onBlur={() => setIsInputFocused(false)}
-                    />
+                  <View style={styles.dimensionsRow}>
+                    <Text style={styles.dimensionsLabel}>Dimensions</Text>
+                    <View style={styles.inputsRow}>
+                      <TextInput
+                        style={[styles.input, widthError ? styles.inputError : null]}
+                        keyboardType="numeric"
+                        value={width}
+                        onChangeText={setWidth}
+                        onFocus={() => setIsInputFocused(true)}
+                        onBlur={() => setIsInputFocused(false)}
+                      />
+                      <Text style={styles.xLabel}>x</Text>
+                      <TextInput
+                        style={[styles.input, heightError ? styles.inputError : null]}
+                        keyboardType="numeric"
+                        value={height}
+                        onChangeText={setHeight}
+                        onFocus={() => setIsInputFocused(true)}
+                        onBlur={() => setIsInputFocused(false)}
+                      />
+                    </View>
                   </View>
+                  {(widthError || heightError) && (
+                    <Text style={styles.errorText}>
+                      {widthError || heightError}
+                    </Text>
+                  )}
                 </View>
-                {(widthError || heightError) && (
-                  <Text style={styles.errorText}>
-                    {widthError || heightError}
-                  </Text>
-                )}
                 <View style={styles.toggleContainer}>
                   <Text style={styles.toggleLabel}>Greyscale</Text>
-                  <Switch
-                    value={isGreyscale}
-                    onValueChange={setIsGreyscale}
-                  />
+                  <Switch value={isGreyscale} onValueChange={setIsGreyscale} />
                 </View>
                 <View style={styles.toggleContainer}>
                   <Text style={styles.toggleLabel}>Blur</Text>
-                  <Switch
-                    value={isBlur}
-                    onValueChange={setIsBlur}
-                  />
+                  <Switch value={isBlur} onValueChange={setIsBlur} />
                 </View>
               </View>
               <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
@@ -482,14 +472,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   dimensionsContainer: {
+    marginBottom: 20, // Space between dimensions section and greyscale toggle
+  },
+  dimensionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 5, // Small space between the inputs and potential error message
   },
   dimensionsLabel: {
     fontSize: 16,
     color: '#1A1A1A',
-    marginRight: 10,
+    marginRight: 10, // Space between label and inputs
   },
   inputsRow: {
     flex: 1,
@@ -504,10 +497,18 @@ const styles = StyleSheet.create({
     padding: 8,
     textAlign: 'center',
   },
+  inputError: {
+    borderColor: 'red',
+  },
   xLabel: {
     fontSize: 16,
     color: '#1A1A1A',
     marginHorizontal: 8,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 14,
+    marginTop: 5, // Space between inputs and error message
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -531,13 +532,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  inputError: {
-    borderColor: 'red',
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 14,
-    marginTop: 5,
   },
 });
