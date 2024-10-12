@@ -528,6 +528,7 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     marginHorizontal: 20,
+    marginBottom: Platform.OS === 'ios' ? 0 : 20,
     borderRadius: 10,
   },
   doneButtonText: {
