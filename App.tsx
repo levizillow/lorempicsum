@@ -418,7 +418,6 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   listContainer: {
-    paddingTop: 10,
     paddingBottom: 20,
   },
   imageContainer: {
