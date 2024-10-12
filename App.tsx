@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Platform, TextInput, Switch, Keyboard, RefreshControl } from 'react-native';
+import { View, Text, Image, ActivityIndicator, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Platform, TextInput, Switch, Keyboard, RefreshControl, Animated, Easing } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, TouchableWithoutFeedback, Animated } from 'react-native';
+import { Modal, TouchableWithoutFeedback } from 'react-native';
 
 const { width } = Dimensions.get('window');
 const imageWidth = width;
@@ -46,8 +46,41 @@ function TitleBar({ onFilterPress }) {
 }
 
 function ImageList({ images, loading, imageDimensions, onRefresh }) {
-  const renderItem = ({ item }: { item: ImageItem }) => (
-    <View style={styles.imageContainer}>
+  const [animatedImages, setAnimatedImages] = useState(images);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (loading && images.length === 0) {
+      Animated.timing(slideAnim, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.in(Easing.cubic), // Starts slow, finishes fast
+        useNativeDriver: true,
+      }).start(() => {
+        setAnimatedImages([]);
+      });
+    } else if (!loading) {
+      setAnimatedImages(images);
+      slideAnim.setValue(0);
+    }
+  }, [loading, images]);
+
+  const renderItem = ({ item, index }: { item: ImageItem; index: number }) => (
+    <Animated.View
+      style={[
+        styles.imageContainer,
+        {
+          transform: [
+            {
+              translateY: slideAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, Dimensions.get('window').height],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
       <Image 
         source={{ uri: item.uri }} 
         style={[styles.image, { width: item.width, height: item.height }]}
@@ -55,16 +88,16 @@ function ImageList({ images, loading, imageDimensions, onRefresh }) {
       <View style={styles.photographerPill}>
         <Text style={styles.photographerText}>{item.photographer}</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 
-  if (loading) {
+  if (loading && animatedImages.length === 0) {
     return <LoadingIndicator />;
   }
 
   return (
     <FlatList
-      data={images}
+      data={animatedImages}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.listContainer}
