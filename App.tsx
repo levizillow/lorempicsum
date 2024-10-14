@@ -554,9 +554,10 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end', // This will push the inputs to the right
   },
   input: {
-    flex: 1,
+    width: 70, // Set fixed width to 200px
     borderWidth: 1,
     borderColor: '#CCCCCC',
     borderRadius: 10,
