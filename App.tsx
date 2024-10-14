@@ -4,6 +4,7 @@ import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, TouchableWithoutFeedback } from 'react-native';
+import Slider from '@react-native-community/slider';
 
 const { width } = Dimensions.get('window');
 const imageWidth = width;
@@ -118,15 +119,15 @@ function AppContent() {
   const [imageDimensions, setImageDimensions] = useState({ width: 900, height: 600 });
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isBlur, setIsBlur] = useState(false);
+  const [blurIntensity, setBlurIntensity] = useState(0);
   const [isGreyscale, setIsGreyscale] = useState(false);
 
-  const refreshImages = useCallback(async (newDimensions?: { width: number; height: number }, newIsBlur?: boolean, newIsGreyscale?: boolean) => {
+  const refreshImages = useCallback(async (newDimensions?: { width: number; height: number }, newBlurIntensity?: number, newIsGreyscale?: boolean) => {
     setLoading(true);
     setImages([]);
     
     const dimensions = newDimensions || imageDimensions;
-    const blurSetting = newIsBlur !== undefined ? newIsBlur : isBlur;
+    const blurSetting = newBlurIntensity !== undefined ? newBlurIntensity : blurIntensity;
     const greyscaleSetting = newIsGreyscale !== undefined ? newIsGreyscale : isGreyscale;
     
     try {
@@ -139,12 +140,12 @@ function AppContent() {
     } finally {
       setLoading(false);
     }
-  }, [imageDimensions, isBlur, isGreyscale]);
+  }, [imageDimensions, blurIntensity, isGreyscale]);
 
-  const fetchImageAndPhotographer = async (index: number, dimensions: { width: number; height: number }, blur: boolean, greyscale: boolean): Promise<ImageItem> => {
+  const fetchImageAndPhotographer = async (index: number, dimensions: { width: number; height: number }, blur: number, greyscale: boolean): Promise<ImageItem> => {
     const { width, height } = dimensions;
     const randomNumber = Math.floor(1000 + Math.random() * 9000);
-    const blurParam = blur ? '&blur=5' : '';
+    const blurParam = blur > 0 ? `&blur=${blur}` : '';
     const greyscaleParam = greyscale ? '&grayscale' : '';
     const response = await fetch(`https://picsum.photos/${width}/${height}?random=${randomNumber}${blurParam}${greyscaleParam}`);
     const imageUrl = response.url;
@@ -154,7 +155,7 @@ function AppContent() {
     const scaledDimensions = calculateScaledDimensions(width, height);
     return {
       id: `image-${index}`,
-      uri: `https://picsum.photos/id/${id}/${width}/${height}${blur ? '?blur=5' : ''}${greyscale ? (blur ? '&' : '?') + 'grayscale' : ''}`,
+      uri: `https://picsum.photos/id/${id}/${width}/${height}${blur > 0 ? `?blur=${blur}` : ''}${greyscale ? (blur > 0 ? '&' : '?') + 'grayscale' : ''}`,
       photographer: infoData.author,
       width: scaledDimensions.width,
       height: scaledDimensions.height,
@@ -169,19 +170,19 @@ function AppContent() {
     setBottomSheetVisible(true);
   };
 
-  const handleBottomSheetClose = (newDimensions?: { width: number; height: number }, newIsBlur?: boolean, newIsGreyscale?: boolean) => {
+  const handleBottomSheetClose = (newDimensions?: { width: number; height: number }, newBlurIntensity?: number, newIsGreyscale?: boolean) => {
     setBottomSheetVisible(false);
-    if (newDimensions || newIsBlur !== undefined || newIsGreyscale !== undefined) {
+    if (newDimensions || newBlurIntensity !== undefined || newIsGreyscale !== undefined) {
       if (newDimensions) {
         setImageDimensions(newDimensions);
       }
-      if (newIsBlur !== undefined) {
-        setIsBlur(newIsBlur);
+      if (newBlurIntensity !== undefined) {
+        setBlurIntensity(newBlurIntensity);
       }
       if (newIsGreyscale !== undefined) {
         setIsGreyscale(newIsGreyscale);
       }
-      refreshImages(newDimensions || imageDimensions, newIsBlur, newIsGreyscale);
+      refreshImages(newDimensions || imageDimensions, newBlurIntensity, newIsGreyscale);
     }
   };
 
@@ -207,7 +208,7 @@ function AppContent() {
         topInset={topInset}
         bottomInset={bottomInset}
         currentDimensions={imageDimensions}
-        isBlur={isBlur}
+        blurIntensity={blurIntensity}
         isGreyscale={isGreyscale}
       />
     </View>
@@ -216,22 +217,22 @@ function AppContent() {
 
 interface BottomSheetProps {
   visible: boolean;
-  onClose: (newDimensions?: { width: number; height: number }, newIsBlur?: boolean, newIsGreyscale?: boolean) => void;
+  onClose: (newDimensions?: { width: number; height: number }, newBlurIntensity?: number, newIsGreyscale?: boolean) => void;
   topInset: number;
   bottomInset: number;
   currentDimensions: { width: number; height: number };
-  isBlur: boolean;
+  blurIntensity: number;
   isGreyscale: boolean;
 }
 
-const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, bottomInset, currentDimensions, isBlur, isGreyscale }) => {
+const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, bottomInset, currentDimensions, blurIntensity, isGreyscale }) => {
   const [contentHeight, setContentHeight] = useState(0);
   const slideAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [width, setWidth] = useState(currentDimensions.width.toString());
   const [height, setHeight] = useState(currentDimensions.height.toString());
+  const [localBlurIntensity, setLocalBlurIntensity] = useState(blurIntensity);
   const [localIsGreyscale, setLocalIsGreyscale] = useState(isGreyscale);
-  const [localIsBlur, setLocalIsBlur] = useState(isBlur);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
@@ -269,7 +270,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
     if (visible) {
       setWidth(currentDimensions.width.toString());
       setHeight(currentDimensions.height.toString());
-      setLocalIsBlur(isBlur);
+      setLocalBlurIntensity(blurIntensity);
       setLocalIsGreyscale(isGreyscale);
       Animated.parallel([
         Animated.timing(slideAnim, {
@@ -297,7 +298,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
         })
       ]).start();
     }
-  }, [visible, totalHeight, currentDimensions, isBlur, isGreyscale]);
+  }, [visible, totalHeight, currentDimensions, blurIntensity, isGreyscale]);
 
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],
@@ -318,8 +319,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
     if (isValid) {
       const newWidth = parseInt(width);
       const newHeight = parseInt(height);
-      if (newWidth !== currentDimensions.width || newHeight !== currentDimensions.height || localIsBlur !== isBlur || localIsGreyscale !== isGreyscale) {
-        onClose({ width: newWidth, height: newHeight }, localIsBlur, localIsGreyscale);
+      if (newWidth !== currentDimensions.width || newHeight !== currentDimensions.height || localBlurIntensity !== blurIntensity || localIsGreyscale !== isGreyscale) {
+        onClose({ width: newWidth, height: newHeight }, localBlurIntensity, localIsGreyscale);
       } else {
         onClose();
       }
@@ -362,7 +363,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
             styles.overlay,
             { 
               opacity: fadeAnim,
-              top: topInset, // This ensures the overlay starts below the title bar
+              top: topInset,
             }
           ]}
         />
@@ -371,13 +372,12 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
             styles.bottomSheet,
             { 
               transform: [{ translateY }],
-              paddingBottom: safeBottomInset,
             }
           ]}
         >
           <TouchableWithoutFeedback onPress={handleContentPress}>
             <View 
-              style={styles.bottomSheetContent}
+              style={[styles.bottomSheetContent, { paddingBottom: safeBottomInset }]}
               onLayout={(event) => {
                 const { height } = event.nativeEvent.layout;
                 setContentHeight(height);
@@ -413,13 +413,20 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, topInset, b
                     </Text>
                   )}
                 </View>
+                <View style={styles.sliderContainer}>
+                  <Text style={styles.sliderLabel}>Blur</Text>
+                  <Slider
+                    style={styles.slider}
+                    minimumValue={0}
+                    maximumValue={10}
+                    step={1}
+                    value={localBlurIntensity}
+                    onValueChange={setLocalBlurIntensity}
+                  />
+                </View>
                 <View style={styles.toggleContainer}>
                   <Text style={styles.toggleLabel}>Greyscale</Text>
                   <Switch value={localIsGreyscale} onValueChange={setLocalIsGreyscale} />
-                </View>
-                <View style={styles.toggleContainer}>
-                  <Text style={styles.toggleLabel}>Blur</Text>
-                  <Switch value={localIsBlur} onValueChange={setLocalIsBlur} />
                 </View>
               </View>
               <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
@@ -603,5 +610,21 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     fontSize: 15,
     fontWeight: 'bold',
+  },
+  sliderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  sliderLabel: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 15,
+    color: '#1A1A1A',
+    width: 50, // You can adjust this value as needed
+  },
+  slider: {
+    flex: 1,
+    marginLeft: 10,
   },
 });
